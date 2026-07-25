@@ -18,6 +18,11 @@ def load_data_and_models():
     try:
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         
+        # Add models directory to sys.path so pickle can resolve 'baseline' module
+        models_dir = os.path.join(base_dir, 'models')
+        if models_dir not in sys.path:
+            sys.path.append(models_dir)
+            
         df_prod = pd.read_csv(os.path.join(base_dir, 'data', 'production_logs.csv'))
         df_labels = pd.read_csv(os.path.join(base_dir, 'data', 'labels_holdout.csv'))
         df = pd.concat([df_prod, df_labels], axis=1)
