@@ -8,7 +8,11 @@ from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_sco
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from baseline import StatisticalBaselineProfiler
-from sequence_detector import SequenceAnomalyModel
+try:
+    from sequence_detector import SequenceAnomalyModel
+except OSError as e:
+    print(f"Warning: PyTorch failed to load due to missing Windows DLLs ({e}). Using Scikit-Learn fallback model instead.")
+    from sequence_detector_fallback import SequenceAnomalyModel
 from classifier import AnomalyClassifier
 
 def evaluate_detector(y_true, y_scores, top_percent=0.01):
