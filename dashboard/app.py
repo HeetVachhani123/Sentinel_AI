@@ -61,11 +61,15 @@ def main():
             # Get anomaly type prediction
             X_feats = classifier._engineer_features(pd.DataFrame([row]))
             
-            # Pad missing columns
-            for col in classifier.features:
-                if col not in X_feats.columns:
-                    X_feats[col] = 0
+            # Pad missing columns efficiently to avoid DataFrame fragmentation
+            missing_cols = [col for col in classifier.features if col not in X_feats.columns]
+            if missing_cols:
+                missing_df = pd.DataFrame(0, index=X_feats.index, columns=missing_cols)
+                X_feats = pd.concat([X_feats, missing_df], axis=1)
+                
             X_feats = X_feats[classifier.features]
+            # Convert to float to avoid dtype-related SHAP additivity errors
+            X_feats = X_feats.astype(float)
             
             pred_type = classifier.model.predict(X_feats)[0]
             

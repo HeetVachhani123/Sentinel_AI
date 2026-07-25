@@ -19,8 +19,8 @@ class AlertExplainer:
         # Ensure correct column order
         X = session_features_df[self.feature_names]
         
-        # Calculate SHAP values
-        shap_values = self.explainer.shap_values(X)
+        # Calculate SHAP values (disable additivity check to prevent precision-related crashes)
+        shap_values = self.explainer.shap_values(X, check_additivity=False)
         
         # For multiclass, shap_values is a list of arrays (one per class)
         # Or an array of shape (samples, features, classes) depending on SHAP version
