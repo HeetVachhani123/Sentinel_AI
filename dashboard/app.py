@@ -16,13 +16,15 @@ st.set_page_config(page_title="Sentinel-AI Dashboard", layout="wide")
 def load_data_and_models():
     # In a real app, this would be a database connection
     try:
-        df_prod = pd.read_csv('../data/production_logs.csv')
-        df_labels = pd.read_csv('../data/labels_holdout.csv')
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        
+        df_prod = pd.read_csv(os.path.join(base_dir, 'data', 'production_logs.csv'))
+        df_labels = pd.read_csv(os.path.join(base_dir, 'data', 'labels_holdout.csv'))
         df = pd.concat([df_prod, df_labels], axis=1)
         
-        with open('../models/saved_models/baseline.pkl', 'rb') as f:
+        with open(os.path.join(base_dir, 'models', 'saved_models', 'baseline.pkl'), 'rb') as f:
             baseline = pickle.load(f)
-        with open('../models/saved_models/classifier.pkl', 'rb') as f:
+        with open(os.path.join(base_dir, 'models', 'saved_models', 'classifier.pkl'), 'rb') as f:
             classifier = pickle.load(f)
             
         return df, baseline, classifier
