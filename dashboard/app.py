@@ -44,8 +44,8 @@ def main():
     if df is None:
         return
         
-    # We will score the last 1000 sessions for the dashboard
-    df_recent = df.tail(1000).copy()
+    # We will score the last 200 sessions for the dashboard (reduced from 1000 for faster loading)
+    df_recent = df.tail(200).copy()
     
     # Process alerts
     alerts = []
@@ -112,7 +112,7 @@ def main():
     if not df_filtered.empty:
         # We can use st.dataframe with styling
         st.dataframe(
-            df_filtered.style.applymap(
+            df_filtered.style.map(
                 lambda x: 'background-color: #ffcccc' if x == 'Low (Cold-Start)' else '', subset=['Confidence']
             ),
             use_container_width=True
