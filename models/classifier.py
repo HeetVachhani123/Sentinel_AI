@@ -39,7 +39,6 @@ class AnomalyClassifier:
         num_cols = ['session_duration', 'is_failed_auth', 'is_off_hours']
         
         X = pd.concat([df[num_cols], df_encoded], axis=1)
-        self.features = X.columns.tolist()
         return X
 
     def fit(self, df_flagged):
@@ -51,6 +50,7 @@ class AnomalyClassifier:
         # Filter out 'normal' if we only want to classify which anomaly type
         # Or keep 'normal' to also classify false positives
         X = self._engineer_features(df_flagged)
+        self.features = X.columns.tolist()
         y = df_flagged['label']
         
         self.model.fit(X, y)
