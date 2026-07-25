@@ -57,6 +57,13 @@ class AlertExplainer:
                 feat_name = f"unusual location ({feat_name.split('_')[-1]})"
             elif feat_name.startswith('resource_accessed_'):
                 feat_name = f"unusual resource ({feat_name.split('_')[-1]})"
+            elif feat_name.startswith('command_sequence_'):
+                cmd_part = feat_name.replace('command_sequence_', '')
+                feat_name = f"unusual command sequence involving '{cmd_part}'"
+            elif feat_name == 'session_duration':
+                feat_name = 'unusual session duration'
+            elif feat_name == 'data_transferred':
+                feat_name = 'abnormal data transfer volume'
             
             top_features.append(feat_name)
             
