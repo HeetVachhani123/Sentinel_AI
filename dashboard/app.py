@@ -306,12 +306,12 @@ def main():
             
             '<div style="display:flex;justify-content:space-between;margin-bottom:8px;">'
             '<span style="color:#94A3B8;font-size:13px;">Precision</span>'
-            '<span style="color:#F9FAFB;font-weight:500;font-size:13px;">24.1%</span>'
+            '<span style="color:#F9FAFB;font-weight:500;font-size:13px;">24.5%</span>'
             '</div>'
             
             '<div style="display:flex;justify-content:space-between;margin-bottom:8px;">'
             '<span style="color:#94A3B8;font-size:13px;">Recall</span>'
-            '<span style="color:#F9FAFB;font-weight:500;font-size:13px;">31.7%</span>'
+            '<span style="color:#F9FAFB;font-weight:500;font-size:13px;">32.2%</span>'
             '</div>'
             
             '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
@@ -363,7 +363,7 @@ def main():
     with c3:
         st.markdown(kpi_card("Critical Threats", str(high_risk), "Risk score > 0.80"), unsafe_allow_html=True)
     with c4:
-        st.markdown(kpi_card("Detection Recall", "31.7%", "Top 5% Alert Budget"), unsafe_allow_html=True)
+        st.markdown(kpi_card("Detection Recall", "32.2%", "Top 5% Alert Budget"), unsafe_allow_html=True)
 
     st.markdown('<div style="height:32px;"></div>', unsafe_allow_html=True)
 

@@ -2,7 +2,17 @@ import pandas as pd
 import numpy as np
 import sys
 import os
+import random
 from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score
+
+# Lock in all sources of randomness for identical reproducible results
+np.random.seed(42)
+random.seed(42)
+try:
+    import torch
+    torch.manual_seed(42)
+except Exception:
+    pass
 
 # Add parent directory to path to allow importing data_gen
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -125,7 +135,7 @@ if __name__ == "__main__":
     # In practice, you'd train this on historical confirmed incidents
     df_anomalies = df_full[df_full['label'] != 'normal']
     # Add some normal data too
-    df_clf_train = pd.concat([df_anomalies, df_full[df_full['label'] == 'normal'].sample(len(df_anomalies))])
+    df_clf_train = pd.concat([df_anomalies, df_full[df_full['label'] == 'normal'].sample(len(df_anomalies), random_state=42)])
     
     classifier = AnomalyClassifier()
     classifier.fit(df_clf_train)

@@ -9,8 +9,8 @@ To solve this, Sentinel-AI learns the "normal" behavioral patterns (timing, loca
 The challenge required handling sequential data, extreme class imbalance, and the cold-start problem. Our system successfully tackled all requirements:
 
 * **Extreme Class Imbalance:** We successfully generated and processed **50,182** total sessions across **500** distinct entities, with an exact injected anomaly rate of **3.35%** (48,500 Normal vs. 1,682 Anomalous sessions).
-* **Alert Budgeting:** By combining the Statistical Baseline with the Sequence Detector, we boosted ROC-AUC to **0.83**. Evaluated at a realistic "Top-5% Alert Budget" (SOC analysts investigate the top 5% riskiest events), our system achieves a **31.7% Recall** while maintaining a very low False Positive Rate of just **4.0%**.
-* **Threat Categorization:** Once an anomaly is flagged, our supervised classifier correctly identifies the *exact* type of attack with **95% accuracy** and a Macro F1-score of **0.96**.
+* **Alert Budgeting:** By combining the Statistical Baseline with the Sequence Detector, we boosted ROC-AUC to **0.84**. Evaluated at a realistic "Top-5% Alert Budget" (SOC analysts investigate the top 5% riskiest events), our system achieves a **32.2% Recall** while maintaining a very low False Positive Rate of just **4.0%**.
+* **Threat Categorization:** Once an anomaly is flagged, our supervised classifier correctly identifies the *exact* type of attack with **95.3% accuracy** and a Macro F1-score of **0.96**.
 
 ## 3. Architecture
 
@@ -73,13 +73,13 @@ Rather than reporting a single threshold, we show the full precision/recall/FPR 
 
 | Alert Budget | Precision | Recall | F1     | FPR   |
 |:------------:|:---------:|:------:|:------:|:-----:|
-| Top 1%       | 24.4%     | 6.4%   | 0.102  | 0.79% |
-| Top 2%       | 23.3%     | 12.2%  | 0.161  | 1.6%  |
-| Top 3%       | 23.5%     | 18.5%  | 0.207  | 2.4%  |
-| Top 4%       | 20.8%     | 21.8%  | 0.213  | 3.3%  |
-| **Top 5%** ✓ | **24.1%** | **31.7%** | **0.274** | **4.0%** |
+| Top 1%       | 26.8%     | 7.1%   | 0.112  | 0.77% |
+| Top 2%       | 22.5%     | 11.8%  | 0.155  | 1.6%  |
+| Top 3%       | 21.6%     | 17.0%  | 0.191  | 2.5%  |
+| Top 4%       | 20.0%     | 21.0%  | 0.205  | 3.3%  |
+| **Top 5%** ✓ | **24.5%** | **32.2%** | **0.278** | **4.0%** |
 
-**ROC-AUC (ensemble): 0.8281** — up from 0.7575 when using the sequence detector alone, confirming the ensemble genuinely separates anomalies from normal rather than just shifting the threshold.
+**ROC-AUC (ensemble): 0.8368** — up from 0.7575 when using the sequence detector alone, confirming the ensemble genuinely separates anomalies from normal rather than just shifting the threshold.
 
 *Answering the key question: at the recommended 5% operating point, roughly 24 out of every 100 alerts triggered are real threats, and the analyst queue receives less than 4% false positives.*
 
@@ -90,9 +90,9 @@ The classifier achieved 100% recall on specific attack signatures, with only min
 * **Impossible Travel:** 242/242 correct (100% recall, 99% precision)
 * **Insider Drift:** 240/240 correct (100% recall, 100% precision)
 * **Low & Slow Exfil:** 238/238 correct (100% recall, 100% precision)
-* **Lateral Movement:** 240/240 correct (100% recall, 89% precision)
-* **Device Spoofing:** 242/242 correct (100% recall, 80% precision)
-* **Credential Stuffing:** 240/240 correct (100% recall, 79% precision)
+* **Lateral Movement:** 240/240 correct (100% recall, 90% precision)
+* **Device Spoofing:** 242/242 correct (100% recall, 83% precision)
+* **Credential Stuffing:** 240/240 correct (100% recall, 77% precision)
 
 *Note: Credential Stuffing and Device Spoofing show lower precision because their feature signatures (repeated failed-auth, new device fingerprint) partially overlap with Brute Force noise in the training set. In a production system, disambiguation would be improved by incorporating source-IP velocity (many entities from one IP = stuffing) and device fingerprint change-rate (gradual vs. sudden = spoofing vs. new-device).*
 
