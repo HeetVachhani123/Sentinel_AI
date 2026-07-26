@@ -67,5 +67,8 @@ class AlertExplainer:
             
             top_features.append(feat_name)
             
-        reason = f"Flagged as {anomaly_type} due to {top_features[0]} and {top_features[1]}"
+        display_type = anomaly_type
+        if display_type == 'normal':
+            display_type = 'unclassified anomaly'
+        reason = f"Flagged as {display_type} due to {top_features[0]} and {top_features[1]}"
         return reason

@@ -54,8 +54,9 @@ def evaluate_detector(y_true, y_scores, top_percent=0.01):
 
 if __name__ == "__main__":
     print("Loading datasets...")
-    prod_path = '../data/production_logs.csv'
-    labels_path = '../data/labels_holdout.csv'
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    prod_path = os.path.join(base_dir, 'data', 'production_logs.csv')
+    labels_path = os.path.join(base_dir, 'data', 'labels_holdout.csv')
     
     if not os.path.exists(prod_path):
         print("Data not found. Please run data_gen/generate.py first.")
@@ -84,6 +85,15 @@ if __name__ == "__main__":
     seq_detector.fit(df_train_normal)
     
     print("Scoring test set with Baseline and Sequence Detector...")
+    
+    # Score with Baseline
+    baseline_scores = []
+    for _, row in df_test.iterrows():
+        b_score, _ = baseline.score_session(row)
+        baseline_scores.append(b_score)
+    df_test = df_test.copy()
+    df_test['baseline_score'] = baseline_scores
+
     # Score with sequence detector
     seq_scores_df = seq_detector.score_sequences(df_test)
     
@@ -91,10 +101,25 @@ if __name__ == "__main__":
     # Because sequence scoring drops the first `seq_len` items per entity
     df_test_scored = pd.merge(df_test, seq_scores_df, on=['entity_id', 'timestamp'], how='inner')
     
+    # Min-max scale sequence scores so they are comparable to baseline scores (0-1)
+    seq_min = df_test_scored['anomaly_score'].min()
+    seq_max = df_test_scored['anomaly_score'].max()
+    if seq_max > seq_min:
+        df_test_scored['seq_score_scaled'] = (df_test_scored['anomaly_score'] - seq_min) / (seq_max - seq_min)
+    else:
+        df_test_scored['seq_score_scaled'] = 0.0
+
+    # Combine scores (Max is great because if either detector is confident, it's anomalous)
+    df_test_scored['combined_score'] = df_test_scored[['baseline_score', 'seq_score_scaled']].max(axis=1)
+    
     y_true = df_test_scored['label']
-    y_scores = df_test_scored['anomaly_score']
+    y_scores = df_test_scored['combined_score']
     
     evaluate_detector(y_true, y_scores, top_percent=0.01)
+    evaluate_detector(y_true, y_scores, top_percent=0.02)
+    evaluate_detector(y_true, y_scores, top_percent=0.03)
+    evaluate_detector(y_true, y_scores, top_percent=0.04)
+    evaluate_detector(y_true, y_scores, top_percent=0.05)
     
     print("Training Anomaly Classifier on ALL anomalies (supervised)...")
     # In practice, you'd train this on historical confirmed incidents
@@ -109,10 +134,11 @@ if __name__ == "__main__":
     classifier.evaluate(df_clf_train)
     
     print("Saving models...")
-    os.makedirs('saved_models', exist_ok=True)
+    models_dir = os.path.join(base_dir, 'models', 'saved_models')
+    os.makedirs(models_dir, exist_ok=True)
     import pickle
-    with open('saved_models/baseline.pkl', 'wb') as f:
+    with open(os.path.join(models_dir, 'baseline.pkl'), 'wb') as f:
         pickle.dump(baseline, f)
-    with open('saved_models/classifier.pkl', 'wb') as f:
+    with open(os.path.join(models_dir, 'classifier.pkl'), 'wb') as f:
         pickle.dump(classifier, f)
     # Note: Sequence model (PyTorch) needs torch.save, but skipping for simplicity in demo

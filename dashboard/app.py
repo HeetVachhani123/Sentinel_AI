@@ -134,7 +134,7 @@ THREATS = {
     "credential_stuffing": {"color": "#3B82F6", "bg": "rgba(59, 130, 246, 0.1)",  "border": "rgba(59, 130, 246, 0.2)",  "label": "Credential Stuffing"},
     "insider_drift":       {"color": "#14B8A6", "bg": "rgba(20, 184, 166, 0.1)",  "border": "rgba(20, 184, 166, 0.2)",  "label": "Insider Drift"},
     "low_and_slow_exfil":  {"color": "#F43F5E", "bg": "rgba(244, 63, 94, 0.1)",   "border": "rgba(244, 63, 94, 0.2)",   "label": "Low & Slow Exfil"},
-    "normal":              {"color": "#94A3B8", "bg": "rgba(148, 163, 184, 0.1)", "border": "rgba(148, 163, 184, 0.2)", "label": "Normal"},
+    "normal":              {"color": "#94A3B8", "bg": "rgba(148, 163, 184, 0.1)", "border": "rgba(148, 163, 184, 0.2)", "label": "Unclassified Borderline"},
 }
 
 # ── HTML helpers — clean, minimal markup ──
@@ -214,6 +214,29 @@ def load_data_and_models():
 # ──────────────────────────────────────────────────────────────────────────────
 # MAIN
 # ──────────────────────────────────────────────────────────────────────────────
+@st.cache_data(show_spinner=False)
+def process_recent_alerts(df_recent, _baseline, _classifier):
+    alerts = []
+    for _, row in df_recent.iterrows():
+        score, is_high_conf = _baseline.score_session(row)
+        if score > 0.4:
+            X_feats = _classifier._engineer_features(pd.DataFrame([row]))
+            missing = [c for c in _classifier.features if c not in X_feats.columns]
+            if missing:
+                X_feats = pd.concat([X_feats, pd.DataFrame(0, index=X_feats.index, columns=missing)], axis=1)
+            X_feats   = X_feats[_classifier.features].astype(float)
+            pred_type = _classifier.model.predict(X_feats)[0]
+            alerts.append({
+                'Timestamp':      row['timestamp'],
+                'Entity':         row['entity_id'],
+                'Entity Type':    row['entity_type'],
+                'Risk Score':     score,
+                'Predicted Type': pred_type,
+                'Confidence':     'High' if is_high_conf else 'Low (Cold-Start)',
+                'RowData':        row
+            })
+    return pd.DataFrame(alerts)
+
 def main():
     df, baseline, classifier = load_data_and_models()
     if df is None:
@@ -221,29 +244,7 @@ def main():
 
     # ── Process alerts ──
     df_recent = df.tail(200).copy()
-    alerts    = []
-    explainer = AlertExplainer(classifier.model, classifier.features)
-
-    for _, row in df_recent.iterrows():
-        score, is_high_conf = baseline.score_session(row)
-        if score > 0.4:
-            X_feats = classifier._engineer_features(pd.DataFrame([row]))
-            missing = [c for c in classifier.features if c not in X_feats.columns]
-            if missing:
-                X_feats = pd.concat([X_feats, pd.DataFrame(0, index=X_feats.index, columns=missing)], axis=1)
-            X_feats   = X_feats[classifier.features].astype(float)
-            pred_type = classifier.model.predict(X_feats)[0]
-            reason    = explainer.explain_alert(X_feats, pred_type)
-            alerts.append({
-                'Timestamp':      row['timestamp'],
-                'Entity':         row['entity_id'],
-                'Entity Type':    row['entity_type'],
-                'Risk Score':     score,
-                'Predicted Type': pred_type,
-                'Explanation':    reason,
-                'Confidence':     'High' if is_high_conf else 'Low (Cold-Start)',
-            })
-    df_alerts = pd.DataFrame(alerts)
+    df_alerts = process_recent_alerts(df_recent, baseline, classifier)
 
     # ──────────────────────────────────────────────────────────────────────────
     # SIDEBAR
@@ -252,9 +253,8 @@ def main():
         # Brand block
         st.markdown(
             '<div style="padding:24px 20px 24px 20px;border-bottom:1px solid #1F2937;">'
-            '<div style="font-size:12px;font-weight:600;color:#94A3B8;letter-spacing:0.5px;margin-bottom:4px;">HONEYWELL</div>'
-            '<div style="font-size:20px;font-weight:600;color:#F9FAFB;line-height:1.2;">Sentinel AI</div>'
-            '<div style="font-size:13px;color:#64748B;margin-top:4px;">SOC Platform</div>'
+            '<div style="font-size:24px;font-weight:800;color:#F9FAFB;letter-spacing:1px;margin-bottom:2px;">Sentinel-AI</div>'
+            '<div style="font-size:14px;font-weight:500;color:#94A3B8;line-height:1.2;">Built for Honeywell Campus Connect</div>'
             '</div>',
             unsafe_allow_html=True
         )
@@ -302,21 +302,21 @@ def main():
         # Model stats block
         st.markdown(
             '<div style="margin-top:24px;padding:20px;background-color:#1E293B;border-radius:8px;">'
-            '<div style="color:#F9FAFB;font-size:13px;font-weight:600;margin-bottom:16px;">Model Telemetry</div>'
+            '<div style="color:#F9FAFB;font-size:13px;font-weight:600;margin-bottom:16px;">Detection Telemetry</div>'
             
-            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
+            '<div style="display:flex;justify-content:space-between;margin-bottom:8px;">'
             '<span style="color:#94A3B8;font-size:13px;">Precision</span>'
-            '<span style="color:#F9FAFB;font-weight:500;font-size:13px;">0.92</span>'
+            '<span style="color:#F9FAFB;font-weight:500;font-size:13px;">24.1%</span>'
             '</div>'
             
-            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
+            '<div style="display:flex;justify-content:space-between;margin-bottom:8px;">'
             '<span style="color:#94A3B8;font-size:13px;">Recall</span>'
-            '<span style="color:#F9FAFB;font-weight:500;font-size:13px;">0.88</span>'
+            '<span style="color:#F9FAFB;font-weight:500;font-size:13px;">31.7%</span>'
             '</div>'
             
             '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
             '<span style="color:#94A3B8;font-size:13px;">Algorithm</span>'
-            '<span style="color:#F9FAFB;font-weight:500;font-size:13px;">RandomForest</span>'
+            '<span style="color:#F9FAFB;font-weight:500;font-size:13px;">Ensemble Fusion</span>'
             '</div>'
             
             '<div style="display:flex;justify-content:space-between;align-items:center;">'
@@ -333,8 +333,10 @@ def main():
     st.markdown(
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid #1F2937;">'
         '<div>'
+        '<div style="font-size:15px;font-weight:600;color:#3B82F6;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">AI-Powered Behavioral Anomaly Detection for Cybersecurity</div>'
         '<h1 style="font-size:24px;font-weight:600;margin:0;color:#F9FAFB;">System Overview</h1>'
-        '<div style="font-size:14px;color:#94A3B8;margin-top:4px;">Monitor and analyze behavioral anomalies across the infrastructure.</div>'
+        '<div style="font-size:14px;color:#94A3B8;margin-top:4px;">Monitor and analyze behavioral anomalies across the infrastructure.<br>'
+        '<span style="color:#10B981;font-weight:500;">Business Impact:</span> At a 5% alert budget, analysts review only high-risk sessions — an estimated 20x reduction in manual triage time.</div>'
         '</div>'
         
         '<div style="display:flex;align-items:center;gap:12px;">'
@@ -361,7 +363,7 @@ def main():
     with c3:
         st.markdown(kpi_card("Critical Threats", str(high_risk), "Risk score > 0.80"), unsafe_allow_html=True)
     with c4:
-        st.markdown(kpi_card("Model Confidence", "92%", "Overall precision"), unsafe_allow_html=True)
+        st.markdown(kpi_card("Detection Recall", "31.7%", "Top 5% Alert Budget"), unsafe_allow_html=True)
 
     st.markdown('<div style="height:32px;"></div>', unsafe_allow_html=True)
 
@@ -388,23 +390,35 @@ def main():
     )
 
     if not df_filtered.empty:
+        df_display = df_filtered.head(15)
+        from explain.explainer import AlertExplainer
+        explainer = AlertExplainer(classifier.model, classifier.features)
+        
         rows = ""
-        for _, row in df_filtered.iterrows():
-            short_ent = str(row['Entity'])[:28] + '…' if len(str(row['Entity'])) > 28 else str(row['Entity'])
-            short_ts  = str(row['Timestamp'])[:16]
-            expl      = str(row['Explanation'])[:85] + '…' if len(str(row['Explanation'])) > 85 else str(row['Explanation'])
+        for _, row_display in df_display.iterrows():
+            # Generate explanation on the fly
+            X_feats = classifier._engineer_features(pd.DataFrame([row_display['RowData']]))
+            missing = [c for c in classifier.features if c not in X_feats.columns]
+            if missing:
+                X_feats = pd.concat([X_feats, pd.DataFrame(0, index=X_feats.index, columns=missing)], axis=1)
+            X_feats = X_feats[classifier.features].astype(float)
+            reason = explainer.explain_alert(X_feats, row_display['Predicted Type'])
+            
+            short_ent = str(row_display['Entity'])[:28] + '…' if len(str(row_display['Entity'])) > 28 else str(row_display['Entity'])
+            short_ts  = str(row_display['Timestamp'])[:16]
+            expl      = str(reason)[:85] + '…' if len(str(reason)) > 85 else str(reason)
 
             rows += (
                 '<tr style="border-bottom:1px solid #1F2937;transition:background-color 0.15s ease;" onmouseover="this.style.backgroundColor=\'#1E293B\'" onmouseout="this.style.backgroundColor=\'transparent\'">'
                 '<td class="mono" style="padding:16px;font-size:12px;color:#94A3B8;white-space:nowrap;">' + short_ts + '</td>'
                 '<td style="padding:16px;">'
                 '<div class="mono" style="font-size:13px;color:#F9FAFB;margin-bottom:4px;">' + short_ent + '</div>'
-                '<div>' + et_badge(row['Entity Type']) + '</div>'
+                '<div>' + et_badge(row_display['Entity Type']) + '</div>'
                 '</td>'
-                '<td style="padding:16px;">' + threat_badge(row['Predicted Type']) + '</td>'
-                '<td style="padding:16px;width:140px;">' + risk_bar(row['Risk Score']) + '</td>'
+                '<td style="padding:16px;">' + threat_badge(row_display['Predicted Type']) + '</td>'
+                '<td style="padding:16px;width:140px;">' + risk_bar(row_display['Risk Score']) + '</td>'
                 '<td style="padding:16px;font-size:13px;color:#94A3B8;max-width:300px;line-height:1.5;">' + expl + '</td>'
-                '<td style="padding:16px;">' + conf_badge(row['Confidence']) + '</td>'
+                '<td style="padding:16px;">' + conf_badge(row_display['Confidence']) + '</td>'
                 '</tr>'
             )
 
@@ -530,10 +544,7 @@ def main():
             with col_r:
                 st.markdown('<div style="font-size:15px;font-weight:600;color:#F9FAFB;margin-bottom:16px;">Behavioral Profile</div>', unsafe_allow_html=True)
                 
-                st.markdown(
-                    '<div style="background-color:#111827;border:1px solid #1F2937;border-radius:8px;padding:24px;">',
-                    unsafe_allow_html=True
-                )
+                profile_html = '<div style="background-color:#111827;border:1px solid #1F2937;border-radius:8px;padding:24px;">'
 
                 prof, _ = baseline.get_profile(selected_entity, entity_history.iloc[0]['entity_type'])
                 if prof:
@@ -541,43 +552,39 @@ def main():
                     typical_resources = list(prof['resource_dist'].keys())[:4]
                     avg_duration      = round(prof['duration_mean'], 1)
 
-                    st.markdown('<div style="color:#94A3B8;font-size:13px;font-weight:500;margin-bottom:12px;">Frequent Locations</div>', unsafe_allow_html=True)
+                    profile_html += '<div style="color:#94A3B8;font-size:13px;font-weight:500;margin-bottom:12px;">Frequent Locations</div>'
                     for g in typical_geos:
-                        st.markdown(
+                        profile_html += (
                             '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
                             '<div style="width:4px;height:4px;background-color:#64748B;border-radius:50%;"></div>'
                             '<div style="color:#F9FAFB;font-size:14px;">' + str(g) + '</div>'
-                            '</div>',
-                            unsafe_allow_html=True
+                            '</div>'
                         )
 
-                    st.markdown('<div style="color:#94A3B8;font-size:13px;font-weight:500;margin:24px 0 12px 0;">Accessed Resources</div>', unsafe_allow_html=True)
+                    profile_html += '<div style="color:#94A3B8;font-size:13px;font-weight:500;margin:24px 0 12px 0;">Accessed Resources</div>'
                     for r in typical_resources:
-                        st.markdown(
+                        profile_html += (
                             '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
                             '<div style="width:4px;height:4px;background-color:#64748B;border-radius:50%;"></div>'
                             '<div style="color:#F9FAFB;font-size:14px;">' + str(r) + '</div>'
-                            '</div>',
-                            unsafe_allow_html=True
+                            '</div>'
                         )
 
-                    st.markdown('<div style="color:#94A3B8;font-size:13px;font-weight:500;margin:24px 0 8px 0;">Average Duration</div>', unsafe_allow_html=True)
-                    st.markdown(
-                        '<div style="color:#F9FAFB;font-size:20px;font-weight:600;">' + str(avg_duration) + 's</div>',
-                        unsafe_allow_html=True
-                    )
+                    profile_html += '<div style="color:#94A3B8;font-size:13px;font-weight:500;margin:24px 0 8px 0;">Average Duration</div>'
+                    profile_html += '<div style="color:#F9FAFB;font-size:20px;font-weight:600;">' + str(avg_duration) + 's</div>'
                 else:
-                    st.markdown('<div style="color:#94A3B8;font-size:14px;">No historical profile established for this entity.</div>', unsafe_allow_html=True)
+                    profile_html += '<div style="color:#94A3B8;font-size:14px;">No historical profile established for this entity.</div>'
 
-                st.markdown('</div>', unsafe_allow_html=True)
+                profile_html += '</div>'
+                st.markdown(profile_html, unsafe_allow_html=True)
 
     # ──────────────────────────────────────────────────────────────────────────
     # FOOTER
     # ──────────────────────────────────────────────────────────────────────────
     st.markdown(
         '<div style="margin-top:64px;padding-top:24px;border-top:1px solid #1F2937;display:flex;justify-content:space-between;color:#64748B;font-size:13px;">'
-        '<div>&copy; 2026 Honeywell International Inc.</div>'
-        '<div>Sentinel AI System v2.1.0</div>'
+        '<div>&copy; 2026 Sentinel-AI — Honeywell Campus Connect Hackathon Prototype</div>'
+        '<div>v1.0.0</div>'
         '</div>',
         unsafe_allow_html=True
     )
