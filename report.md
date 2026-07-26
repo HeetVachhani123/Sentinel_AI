@@ -10,7 +10,7 @@ The challenge required handling sequential data, extreme class imbalance, and th
 
 * **Extreme Class Imbalance:** We successfully generated and processed **50,182** total sessions across **500** distinct entities, with an exact injected anomaly rate of **3.35%** (48,500 Normal vs. 1,682 Anomalous sessions).
 * **Alert Budgeting:** By combining the Statistical Baseline with the Sequence Detector, we boosted ROC-AUC to **0.84**. Evaluated at a realistic "Top-5% Alert Budget" (SOC analysts investigate the top 5% riskiest events), our system achieves a **32.2% Recall** while maintaining a very low False Positive Rate of just **4.0%**.
-* **Threat Categorization:** Once an anomaly is flagged, our supervised classifier correctly identifies the *exact* type of attack with **95.3% accuracy** and a Macro F1-score of **0.96**.
+* **Threat Categorization:** Once an anomaly is flagged, our supervised classifier correctly identifies the *exact* type of attack with **80.0% accuracy** and a Macro F1-score of **0.77**.
 
 ## 3. Architecture
 
@@ -84,15 +84,15 @@ Rather than reporting a single threshold, we show the full precision/recall/FPR 
 *Answering the key question: at the recommended 5% operating point, roughly 24 out of every 100 alerts triggered are real threats, and the analyst queue receives less than 4% false positives.*
 
 **Supervised Threat Classification (Confusion Matrix Highlights):**
-The classifier achieved 100% recall on specific attack signatures, with only minor misclassifications occurring when legitimate normal sessions drifted into ambiguous territory.
+Evaluated on a strict 20% held-out test set, the classifier achieves excellent recall on severe threats (Impossible Travel, Insider Drift, Lateral Movement), but struggles heavily with ambiguous signals like Device Spoofing due to extreme feature overlap with normal baseline variations.
 
-* **Brute Force:** 240/240 correct (100% recall, 96% precision)
-* **Impossible Travel:** 242/242 correct (100% recall, 99% precision)
-* **Insider Drift:** 240/240 correct (100% recall, 100% precision)
-* **Low & Slow Exfil:** 238/238 correct (100% recall, 100% precision)
-* **Lateral Movement:** 240/240 correct (100% recall, 90% precision)
-* **Device Spoofing:** 242/242 correct (100% recall, 83% precision)
-* **Credential Stuffing:** 240/240 correct (100% recall, 77% precision)
+* **Brute Force:** 42/48 correct (88% recall, 70% precision)
+* **Impossible Travel:** 48/48 correct (100% recall, 92% precision)
+* **Insider Drift:** 48/48 correct (100% recall, 100% precision)
+* **Low & Slow Exfil:** 48/48 correct (100% recall, 100% precision)
+* **Lateral Movement:** 48/48 correct (100% recall, 83% precision)
+* **Device Spoofing:** 4/48 correct (8% recall, 9% precision)
+* **Credential Stuffing:** 30/48 correct (62% recall, 59% precision)
 
 *Note: Credential Stuffing and Device Spoofing show lower precision because their feature signatures (repeated failed-auth, new device fingerprint) partially overlap with Brute Force noise in the training set. In a production system, disambiguation would be improved by incorporating source-IP velocity (many entities from one IP = stuffing) and device fingerprint change-rate (gradual vs. sudden = spoofing vs. new-device).*
 

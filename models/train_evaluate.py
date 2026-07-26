@@ -4,6 +4,7 @@ import sys
 import os
 import random
 from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score
+from sklearn.model_selection import train_test_split
 
 # Lock in all sources of randomness for identical reproducible results
 np.random.seed(42)
@@ -135,13 +136,16 @@ if __name__ == "__main__":
     # In practice, you'd train this on historical confirmed incidents
     df_anomalies = df_full[df_full['label'] != 'normal']
     # Add some normal data too
-    df_clf_train = pd.concat([df_anomalies, df_full[df_full['label'] == 'normal'].sample(len(df_anomalies), random_state=42)])
+    df_clf_data = pd.concat([df_anomalies, df_full[df_full['label'] == 'normal'].sample(len(df_anomalies), random_state=42)])
+    
+    # Proper 80/20 train/test split for the classifier
+    df_clf_train, df_clf_test = train_test_split(df_clf_data, test_size=0.2, random_state=42, stratify=df_clf_data['label'])
     
     classifier = AnomalyClassifier()
     classifier.fit(df_clf_train)
     
-    print("Evaluating Classifier on training set (just as a sanity check)...")
-    classifier.evaluate(df_clf_train)
+    print("Evaluating Classifier on held-out test set (20%)...")
+    classifier.evaluate(df_clf_test)
     
     print("Saving models...")
     models_dir = os.path.join(base_dir, 'models', 'saved_models')
