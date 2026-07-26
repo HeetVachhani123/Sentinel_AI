@@ -1,46 +1,37 @@
 <div align="center">
   <h1>🛡️ Sentinel-AI</h1>
   <p><b>Next-Generation Behavioral Anomaly Detection for Modern SOCs</b></p>
-  <p><i>Developed as a Solo Submission for the <b>Honeywell Hackathon</b></i></p>
-  <p><b>Author & Sole Contributor:</b> Heet Vachhani</p>
+  <p><i>Developed for the <b>Honeywell Hackathon</b></i></p>
 </div>
 
 ---
 
-## 📌 Overview
-Traditional signature-based security relies on static rules and known malware hashes, causing it to fail against novel, low-and-slow, or credential-based intrusions. 
+## 💡 The Problem
+Traditional signature-based security relies on static rules and known malware hashes. The problem? It completely fails against novel, low-and-slow, or credential-based intrusions (like insider threats or session hijacking). 
 
-**Sentinel-AI** is a dual-layered, AI-powered behavioral anomaly detection system. It actively learns the "normal" behavioral patterns (timing, location, access sequences) for users, service accounts, and edge devices. By combining a Statistical Baseline Profiler with an MLP Sequence Detector and a Random Forest Classifier, it flags deviations in near real-time and categorizes the exact threat type.
+## 🚀 The Solution: Sentinel-AI
+I built **Sentinel-AI** to tackle this exactly. It is a dual-layered, AI-powered behavioral anomaly detection system. Instead of looking for known bad signatures, it actively learns the "normal" behavioral patterns (timing, location, access sequences) for users, service accounts, and edge devices. 
 
-Every alert is augmented with an **Explainable AI (XAI)** layer using SHAP, empowering SOC analysts to instantly understand *why* an event was flagged.
+By combining statistical baselines with deep sequence detection, it catches deviations in near real-time. Even better, it categorizes the exact threat type and uses an **Explainable AI (XAI)** layer (via SHAP) to tell SOC analysts exactly *why* it flagged an event.
 
-## 🚀 Key Achievements
+## 🏆 Key Hackathon Achievements
 
-* **Robust Data Synthesis:** Handled extreme class imbalance by generating and processing **50,182** highly-realistic access logs across 500 distinct entities with a controlled **3.35% anomaly rate**.
-* **Smart Alert Budgeting:** Boosted ensemble **ROC-AUC to 0.84**, ensuring that at a realistic 5% SOC Alert Budget, analysts receive high-confidence threats with a tiny 4% False Positive Rate.
-* **Granular Threat Categorization:** The supervised classifier achieved an impressive **0.82 Macro F1-score**, correctly disambiguating complex attacks with high recall:
-  * **94%+ Recall** on *Device Spoofing*, *Lateral Movement*.
+* **Robust Data Pipeline:** Wrote a custom data generator to handle extreme class imbalance, processing **50,182** highly-realistic access logs across 500 distinct entities with a controlled 3.35% anomaly rate.
+* **Smart Alert Budgeting:** Achieved an ensemble **ROC-AUC of 0.84**. At a realistic 5% SOC Alert Budget, analysts receive high-confidence threats with a tiny 4% False Positive Rate.
+* **Granular Threat Categorization:** The supervised classifier achieved an impressive **0.82 Macro F1-score**, correctly disambiguating complex attacks with massive recall:
+  * **94%+ Recall** on *Device Spoofing* and *Lateral Movement*.
   * **100% Recall** on *Impossible Travel*, *Insider Drift*, and *Low & Slow Exfiltration*.
 
-## 🏗️ System Architecture
+## 🏗️ How It Works (Architecture Flow)
 
-```mermaid
-graph TD
-    A[Raw Logs / Access Events] --> B[Data Generator]
-    B --> C[Statistical Baseline Profiler]
-    C --> D[MLP Sequence Anomaly Detector]
-    D --> E[Random Forest Classifier]
-    E --> F[SHAP Explainability Module]
-    F --> G[Analyst Streamlit Dashboard]
-```
+1. **Data Ingestion:** Raw access logs are fed into the system.
+2. **Statistical Profiler:** Checks basic metadata (location, time, auth failures) against historical entity baselines.
+3. **MLP Sequence Detector:** Analyzes the chronological sequence of commands to catch "low & slow" attacks.
+4. **Ensemble Fusion:** Combines scores from both models to create a master Risk Score.
+5. **Random Forest Classifier:** If the risk breaches the threshold, this model kicks in to categorize the specific attack vector.
+6. **SOC Dashboard:** Everything is visualized in a live Streamlit app with SHAP feature attributions.
 
-## 📂 Repository Structure
-- `/data_gen`: Synthetic access-log generator handling complex stateful threats (Faker/NumPy).
-- `/models`: Core ML logic including baseline profiling, sequence detection, and classification.
-- `/explain`: Feature attribution per alert using SHAP.
-- `/dashboard`: Interactive SOC Analyst dashboard built with Streamlit and Plotly.
-
-## ⚙️ Setup & Installation
+## ⚙️ Quick Start
 
 **1. Create & Activate Virtual Environment**
 ```bash
@@ -53,28 +44,20 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## 🛠️ Usage
-
-**1. Generate Data**
-Generates 50,000+ sessions injected with 7 unique threat categories.
+**3. Generate Data & Train Models**
 ```bash
+# Generate the synthetic dataset
 python data_gen/generate.py
-```
 
-**2. Train & Evaluate Models**
-Trains the Baseline Profiler, Sequence Detector, and Classifier using a strict 80/20 held-out test split to ensure robust evaluation.
-```bash
+# Train the Baseline, Sequence Detector, and Classifier
 python models/train_evaluate.py
 ```
 
-**3. Launch the SOC Dashboard**
-Fire up the Streamlit app to view the alert queue, investigate entities, and analyze SHAP values.
+**4. Launch the Dashboard**
 ```bash
 cd dashboard
 streamlit run app.py
 ```
 
 ---
-<div align="center">
-  <p>Built with 💡 for the Honeywell Innovation ecosystem by Heet Vachhani.</p>
-</div>
+*Built from scratch by Heet Vachhani for the Honeywell Hackathon.*
