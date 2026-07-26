@@ -8,6 +8,7 @@ class AnomalyClassifier:
     def __init__(self):
         self.model = RandomForestClassifier(n_estimators=100, class_weight='balanced', random_state=42)
         self.features = []
+        self.known_devices = {}
         
     def _engineer_features(self, df):
         """
@@ -27,6 +28,20 @@ class AnomalyClassifier:
         df['is_failed_auth'] = (df['auth_status'] == 'failed').astype(int)
         df['is_off_hours'] = ((pd.to_datetime(df['timestamp']).dt.hour < 8) | (pd.to_datetime(df['timestamp']).dt.hour > 18)).astype(int)
         
+        def check_new_device(row):
+            ent = row.get('entity_id')
+            dev = row.get('device_fingerprint')
+            # If we haven't seen the entity, we can't be sure it's a new device, but let's say 0 to be safe, 
+            # or 1. Given cold start, let's just check if we have it.
+            if ent in self.known_devices and dev in self.known_devices[ent]:
+                return 0
+            return 1
+            
+        if 'entity_id' in df.columns and 'device_fingerprint' in df.columns:
+            df['is_new_device_fingerprint'] = df.apply(check_new_device, axis=1)
+        else:
+            df['is_new_device_fingerprint'] = 0
+        
         # To compute novelty/mismatch properly, we'd need historical context per entity.
         # For simplicity in this demo, let's create random-ish features that correlate with the anomalies based on label 
         # (in a real system, these would be computed from the baseline profiler state).
@@ -36,7 +51,7 @@ class AnomalyClassifier:
         df_encoded = pd.get_dummies(df[cat_cols])
         
         # Numeric features
-        num_cols = ['session_duration', 'is_failed_auth', 'is_off_hours']
+        num_cols = ['session_duration', 'is_failed_auth', 'is_off_hours', 'is_new_device_fingerprint']
         
         X = pd.concat([df[num_cols], df_encoded], axis=1)
         return X
@@ -49,6 +64,16 @@ class AnomalyClassifier:
         """
         # Filter out 'normal' if we only want to classify which anomaly type
         # Or keep 'normal' to also classify false positives
+        
+        # Build known_devices from normal sessions
+        if 'label' in df_flagged.columns:
+            normals = df_flagged[df_flagged['label'] == 'normal']
+            for _, row in normals.iterrows():
+                ent = row['entity_id']
+                if ent not in self.known_devices:
+                    self.known_devices[ent] = set()
+                self.known_devices[ent].add(row['device_fingerprint'])
+
         X = self._engineer_features(df_flagged)
         self.features = X.columns.tolist()
         y = df_flagged['label']
